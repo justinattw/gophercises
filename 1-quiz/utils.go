@@ -61,9 +61,51 @@ func shuffleQuiz[T any](slice []T) {
     }
 }
 
+// Process results
+func processResults(correct int, count int) float64 {
+	var result float64
+	if count == 0 {
+		result = 0.0
+	} else {
+		result = (float64(correct) / float64(count)) * 100
+	}
+	printResult(result)
+	return result
+}
+
 // Print results
 func printResult(result float64) {
 	fmt.Println()
 	resultString := fmt.Sprintf("%s%% correct", strconv.FormatFloat(result, 'f', 2, 64))
 	fmt.Println(resultString)
+}
+
+// Timer - sleeps for s seconds, then reports that it has finished
+func timer(seconds int, done chan<- bool, cancel <-chan bool) {	
+	select {
+	case <- time.After(time.Duration(seconds) * time.Second):
+		done <- true
+		fmt.Println("\nTime's up!")
+		return
+	case <- cancel:
+		return
+	}
+}
+
+// Ask question
+func ask(card Card, response chan<- bool) bool {
+
+	questionString := fmt.Sprintf("> %s", card.Question)  // Ask
+	input := waitForInput(questionString)  // Response
+	res := input == card.Answer
+	response <- res
+
+	return res
+}
+
+func waitForInput(prompt string) string {
+	fmt.Println(prompt)
+	var input string
+	fmt.Scanln(&input)
+	return input
 }
