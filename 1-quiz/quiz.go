@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/csv"
 	"fmt"
 	"log"
 	"os"
@@ -9,24 +8,60 @@ import (
 )
 
 type QA struct {
-	Number   int
 	Question string
 	Answer	 string
+	Response string
 }
 
 func (qa QA) String() string {
-	return fmt.Sprintf("#%s, Q: %s, A: %s", strconv.Itoa(qa.Number), qa.Question, qa.Answer)
+	return fmt.Sprintf("Q: %s, A: %s", qa.Question, qa.Answer)
 }
 
 func main() {
-	data := readCSV()
-	qaList := constructQuestionAnswers(data)
-	fmt.Println()
 
-	// Run quiz
+	// Defaults
+	filename := "problems.csv"
+	shuffle := false
+	time := 30  // runtime of quiz in seconds
+	time++
+	
+	// ----- Command line args -----
+	if len(os.Args) >= 4 {
+		newTime, err := strconv.Atoi(os.Args[3])
+		if err != nil {
+			log.Printf("USAGE: go run quiz.go <filename> <shuffle quiz> <runtime in seconds>")
+		} else {
+			time = newTime
+		}
+	}
+	if len(os.Args) >= 3 {
+		if os.Args[2] == "t" {
+			shuffle = true
+		} else if os.Args[2] != "f" {
+			log.Printf("USAGE: go run quiz.go <filename> <shuffle quiz: {t / f}> <runtime in seconds>")
+		}
+	}
+	if len(os.Args) >= 2 {
+		filename = os.Args[1]
+	}
+
+	// ----- Set up questions list -----
+	qaList, err := readCSV(filename)
+	if err != nil {
+		log.Printf("Failed to read file %s: %v\n", os.Args[1], err)
+	}
+
+	if shuffle {
+		shuffleQuiz(qaList)
+	}
+
+	// ----- Run quiz -----
+	responses := make(chan String)
+
+
 	result := partOne(qaList)
 
-	// Print result
+	// Handle results
 	printResult(result)
 }
 
@@ -35,62 +70,34 @@ func partOne(qaList []QA) float64 {
 	count := 0.0
 	correct := 0.0
 
-	for i, qa := range qaList {
-		questionString := fmt.Sprintf("Question #%s: %s = ", strconv.Itoa(i+1), qa.Question)
-		fmt.Print(questionString)
-
-		var input string
-		fmt.Scan(&input)
-
-		if input == qa.Answer {
+	for _, qa := range qaList {
+		count++
+		if ask(qa) {
 			correct++
 		}
-		count++
 	}
 
 	result := (correct / count) * 100
-
 	return result
 }
 
-func readCSV() [][]string {
-	
-	// Open the CSV file
-	file, err := os.Open("problems.csv")
-	if err != nil {
-		log.Fatalf("Failed to open file: %s\n", err)
-	}
-	
-	defer file.Close()
-
-	// Store file in data slice
-	csvReader := csv.NewReader(file)
-	data, err := csvReader.ReadAll()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return data
+func partTwo(qaList []QA) float64 {
+	return 0.0
 }
 
-func constructQuestionAnswers(data [][]string) []QA {
-	var qaList []QA
-	
-	for i, line := range data {
-		var rec QA
-		rec.Number = i + 1
-		rec.Question = line[0]
-		rec.Answer = line[1]
-		
-		fmt.Println(rec)
-		qaList = append(qaList, rec)
-	}
+func ask(qa QA) bool {
 
-	return qaList
+	// Ask
+	questionString := fmt.Sprintf("> ", qa.Question)
+	fmt.Println(questionString)
+
+	// Answer
+	var input string
+	fmt.Scan(&input)
+
+	// Judge
+	return input == qa.Answer
 }
 
-func printResult(result float64) {
-	fmt.Println()
-	resultString := fmt.Sprintf("%s%% correct", strconv.FormatFloat(result, 'f', 2, 64))
-	fmt.Println(resultString)
-}
+
+
