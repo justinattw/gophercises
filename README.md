@@ -2,4 +2,4 @@
 
 Doing Go exercises from https://gophercises.com/
 
-Hey
+commit 2
